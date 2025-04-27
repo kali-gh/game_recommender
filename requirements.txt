@@ -1,1 +1,3 @@
 pandas
+gensim
+beautifulsoup4

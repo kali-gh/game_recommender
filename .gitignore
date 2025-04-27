@@ -1,6 +1,6 @@
 venv
 data
 processed_data
+model
 *ipynb
-embeddings.py
-load_labels.py
+__pycache__
