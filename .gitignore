@@ -1,6 +1,13 @@
+__pycache__
 venv
-data
+.idea
+
+store_data
+input_data
 processed_data
 model
+
+scratch
 *ipynb
-__pycache__
+
+run_copy_data.sh
