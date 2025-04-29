@@ -16,6 +16,9 @@ We build a simple neural network to predict the score based on these features an
 Our model validation uses a train/validation/test approach and we measure the performance on validation for this and
 then run inference on the test set. 
 
+### Diagram
+![alt text](assets/game_recommender.png)
+
 ### Running.
 
 After setting up the input data (which is not provided in this repo), run :
