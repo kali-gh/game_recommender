@@ -21,8 +21,6 @@ torch.manual_seed(SEED)
 params = Params('input_data/params.json')
 
 
-
-
 def load_data():
     """
     Loads data from input_data directory
@@ -209,7 +207,16 @@ train_loader = create_loader(df_train)
 val_loader = create_loader(df_val)
 
 logger.info("Training model")
-train_model()
+
+model_path = f"{params['model_dir']}/model.pt"
+if params['train']:
+    train_model()
+    torch.save(
+        model.state_dict(),
+        model_path)
+else:
+    model.load_state_dict(torch.load(model_path, weights_only=True))
+    model.eval()
 
 logger.info("Running inference on test data")
 logger.info(len(df_test))
@@ -232,6 +239,3 @@ df_score_only.to_csv(
     f"{params['output_data_dir']}/df_score_only.csv",
     index=False)
 
-torch.save(
-    model.state_dict(),
-    f"{params['model_dir']}/model.pt")

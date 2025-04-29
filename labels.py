@@ -53,7 +53,14 @@ def get_labels():
     logger.info(f"Loaded game data into data frame with columns {','.join(df_game_data.columns)}")
 
     logger.info("Building the embeddings...")
-    documents = df_game_data['about_the_game'].tolist()
+    df_game_data["full_description"] = df_game_data["description"].astype(str) + df_game_data["about_the_game"]
+
+    df_game_data.to_csv(os.path.join(params['output_data_dir'], 'df_game_data.csv'), index=False)
+
+    logger.info("dtypes df_game_data: ")
+    logger.info(df_game_data.dtypes)
+
+    documents = df_game_data['full_description'].tolist()
     df_embeddings = libs.build_df_embeddings(
         documents = documents,
         model_dir = params['model_dir'],
