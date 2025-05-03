@@ -5,8 +5,11 @@ import json
 import torch.nn as nn
 import pandas as pd
 import numpy as np
+import os
 
-from torch.utils.data import Dataset, DataLoader
+from libs import CustomDataset, create_loader
+
+from pathlib import Path
 from sklearn.model_selection import train_test_split
 
 from parameters import Params
@@ -15,49 +18,17 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 SEED = 42
-random.seed(SEED)
 torch.manual_seed(SEED)
 
 params = Params('input_data/params.json')
 
+output_data_dir_scores = os.path.join(params['output_data_dir'], params['output_data_subdir_scores'])
+Path(output_data_dir_scores).mkdir(parents=True, exist_ok=True)
 
-def load_data():
-    """
-    Loads data from input_data directory
-    Returns: train, validation and test dataframes + x columns
-    """
 
-    logger.info("Loading data from input_data directory")
+from labels import get_labels, load_data
+df_labels = get_labels(params['pca_dim'])
 
-    logger.info(f"Loading data from {params['output_data_dir']}")
-
-    df = pd.read_csv(f"{params['output_data_dir']}/df_labels.csv")
-
-    logger.info("Imputing mean review and min review counts")
-    mean_review_pct_overall = df.loc[:, 'review_pct_overall'].dropna().mean()
-    min_review_count_overall = 1
-
-    df.loc[:, 'review_pct_overall'] = df.loc[:, 'review_pct_overall'].fillna(mean_review_pct_overall)
-    df.loc[:, 'review_count_overall'] = min_review_count_overall
-
-    logger.info("Building train, validation and test dataframes")
-    cond_train_val = ~df.rating.isnull()
-
-    df_train_val_local = df[cond_train_val].copy()
-    df_test_local = df[~cond_train_val].copy()
-    df_train_local, df_val_local = train_test_split(df_train_val_local, train_size=0.75, random_state = SEED)
-
-    logger.info(f"Train dataset size : {len(df_train_val_local)}, validation dataset size : {len(df_val_local)},"
-                f" test dataset size {len(df_test_local)}")
-
-    x_cols_selected = [c for c in df.columns if c not in [params['y_col']]]
-    x_cols_selected = [c for c in x_cols_selected if c not in params['meta_cols']]
-
-    assert (params['y_col'] not in x_cols_selected)
-
-    logger.info(f"Using columns {','.join(x_cols_selected)} for training")
-
-    return df_train_local, df_val_local, df_test_local, x_cols_selected
 
 class NN(nn.Module):
     """
@@ -149,41 +120,9 @@ def inference():
 
     return np.array(predictions)
 
-class CustomDataset(Dataset):
-    """
-    Defines a dataset for our processing
-    """
-
-    def __init__(self, X, y):
-        self.X = torch.FloatTensor(X)
-        self.y = torch.FloatTensor(y).reshape(-1, 1)
-
-    def __len__(self):
-        return len(self.X)
-
-    def __getitem__(self, idx):
-        return self.X[idx], self.y[idx]
-
-def create_loader(df, shuffle=True):
-    """
-    Builds a loader to use for training / validation / test
-
-    Args:
-        df: dataframe to pull loader from
-    Returns:
-        the loader to use
-    """
-
-    X = torch.FloatTensor(df[x_cols].values)
-    y = torch.FloatTensor(df.rating.values).reshape(-1, 1)
-
-    dataset = CustomDataset(X, y)
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
-
-    return loader
 
 logger.info("Loading data")
-df_train, df_val, df_test, x_cols = load_data()
+df_train_val, df_train, df_val, df_test, x_cols = load_data()
 input_size =  len(x_cols)
 
 logger.info("Defining parameters")
@@ -203,8 +142,8 @@ criterion = nn.MSELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
 logger.info("Building train and validation loader")
-train_loader = create_loader(df_train)
-val_loader = create_loader(df_val)
+train_loader = create_loader(df_train, x_cols, batch_size, shuffle=False)
+val_loader = create_loader(df_val, x_cols, batch_size, shuffle=False)
 
 logger.info("Training model")
 
@@ -220,14 +159,14 @@ else:
 
 logger.info("Running inference on test data")
 logger.info(len(df_test))
-test_loader = create_loader(df_test, shuffle=False)
+test_loader = create_loader(df_test, x_cols, batch_size, shuffle=False)
 inferences = inference()
 df_test['score'] = inferences
 
 logger.info("Outputing scores")
 cols_score = ['appid', 'title', 'score']
 df_score_only = df_test[cols_score].copy()
-df_test.to_csv(f"{params['output_data_dir']}/df_test.csv")
+df_test.to_csv(f"{output_data_dir_scores}/df_test.csv")
 df_score_only.sort_values(by='score', ascending=False, inplace=True)
 
 with open(f"{params['user_input_data_dir']}/sample_ids_recent_releases.json", 'r') as f:
@@ -236,6 +175,6 @@ with open(f"{params['user_input_data_dir']}/sample_ids_recent_releases.json", 'r
 df_score_only.loc[:, 'recent_release'] = df_score_only.appid.isin(recent_release_ids)
 
 df_score_only.to_csv(
-    f"{params['output_data_dir']}/df_score_only.csv",
+    f"{output_data_dir_scores}/df_score_only.csv",
     index=False)
 
