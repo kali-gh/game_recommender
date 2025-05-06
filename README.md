@@ -1,11 +1,3 @@
-### Environment set up
-
-```
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
 ### What does this do?
 
 We build a simple game recommendation engine based on a simple content based approach. 
@@ -19,7 +11,15 @@ then run inference on the test set.
 ### Diagram
 ![alt text](assets/game_recommender.png)
 
-### Running.
+### Environment set up
+
+```
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Running
 
 After setting up the input data (which is not provided in this repo), run :
 
