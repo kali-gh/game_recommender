@@ -8,6 +8,11 @@ processed_data
 model
 
 scratch
-*ipynb
+dist
+build
 
-run_copy_data.sh
+*ipynb
+*whl
+*egg*
+
+*.sh

@@ -5,18 +5,19 @@ import random
 import pandas as pd
 import numpy as np
 
-import libs
+from .libs import build_df_embeddings
 
 from pathlib import Path
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.model_selection import train_test_split
 
-from parameters import Params
+from .parameters import Params
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 params = Params('input_data/params.json')
+
 output_data_dir_labels = os.path.join(params['output_data_dir'], params['output_data_subdir_labels'])
 Path(output_data_dir_labels).mkdir(parents=True, exist_ok=True)
 
@@ -24,13 +25,7 @@ SEED = 1
 random.seed(SEED)
 np.random.seed(SEED)
 
-
-def load_data():
-    """
-    Loads data from input_data directory
-    Returns: train, validation and test dataframes + x columns
-    """
-
+def build_df_model_ready():
     logger.info("Loading data from input_data directory")
 
     logger.info(f"Loading data from {output_data_dir_labels}")
@@ -50,6 +45,19 @@ def load_data():
         pass
 
     df.to_csv(f"{output_data_dir_labels}/df_labels_model_ready.csv", index=False)
+    with open(f"{output_data_dir_labels}/_SUCCESS", 'w') as f:
+        f.write('done')
+
+    return df
+
+
+def load_data():
+    """
+    Loads data from input_data directory
+    Returns: train, validation and test dataframes + x columns
+    """
+
+    df = build_df_model_ready()
 
     logger.info("Building train, validation and test dataframes")
     cond_train_val = ~df.rating.isnull()
@@ -86,6 +94,9 @@ def get_labels(pca_dim=5):
     input_data_dir = params['input_data_dir']
     file_list_games = [f for f in os.listdir(input_data_dir) if f.endswith('.json')]
 
+    logger.info(f"Found {len(file_list_games)} games in the input_data directory")
+    logger.info(f"First 10 games : {file_list_games[:10]}")
+
     game_data = {}
     for g in file_list_games:
         with open(os.path.join(input_data_dir, g), 'r') as f:
@@ -121,7 +132,7 @@ def get_labels(pca_dim=5):
     logger.info(df_game_data.dtypes)
 
     documents = df_game_data['full_description'].tolist()
-    df_embeddings = libs.build_df_embeddings(
+    df_embeddings = build_df_embeddings(
         documents = documents,
         model_dir = params['model_dir'],
         stoplist = params['stoplist'],

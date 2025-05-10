@@ -28,5 +28,9 @@ python labels.py
 python train.py
 ```
 
+```
+python setup.py bdist_wheel
+```
+
 ### Results
 
