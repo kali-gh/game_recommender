@@ -46,6 +46,26 @@ root mean squared error of 2.27.
 The performance is comparable to a deep neural network baseline (implemented in train_neural.py).  
 
 
+### Example outputs
+
+Given a user profile that has preferences for:
+1. Preference for action-adventure titles & Soul's like titles
+2. Preference for strategy & tactics games
+
+The system recommends new titles as of 2025.05.10 as shown below:
+
+> <a href="https://store.steampowered.com/app/2680010">The First Berserker: Khazan</a>, Score = 7.65
+>
+> <a href="https://store.steampowered.com/app/3373660/Look_Outside">Look Outside</a>, Score = 7.49
+> 
+> <a href="https://store.steampowered.com/app/1486920/Tempest_Rising/">Tempest Rising</a>, Score = 7.27
+> 
+> <a href="https://store.steampowered.com/app/1903340">Clair Obscur: Expedition 33</a>, Score = 7.25
+> 
+> <a href="hhttps://store.steampowered.com/app/2481670/Dino_Path_Trail/">Dino Path Trail</a>, Score = 7.20
+
+which are broadly a good match to the user profile, with the possible exception of Look Outside which has horror elements.
+
 ### Running
 
 After setting up the input data (which is not provided in this repo), run :
