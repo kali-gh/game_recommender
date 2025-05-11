@@ -62,7 +62,7 @@ The system recommends new titles as of 2025.05.10 as shown below:
 > 
 > <a href="https://store.steampowered.com/app/1903340">Clair Obscur: Expedition 33</a>, Score = 7.25
 > 
-> <a href="hhttps://store.steampowered.com/app/2481670/Dino_Path_Trail/">Dino Path Trail</a>, Score = 7.20
+> <a href="https://store.steampowered.com/app/2481670/Dino_Path_Trail/">Dino Path Trail</a>, Score = 7.20
 
 which are broadly a good match to the user profile, with the possible exception of Look Outside which has horror elements.
 
