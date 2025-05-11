@@ -1,18 +1,14 @@
 import logging
 import torch
-import random
 import json
 import torch.nn as nn
-import pandas as pd
 import numpy as np
 import os
 
-from libs import CustomDataset, create_loader
-
 from pathlib import Path
-from sklearn.model_selection import train_test_split
-
-from parameters import Params
+from game_recommender.parameters import Params
+from game_recommender.libs_torch import CustomDataset, create_loader
+from game_recommender.labels import get_labels, load_data
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,10 +21,7 @@ params = Params('input_data/params.json')
 output_data_dir_scores = os.path.join(params['output_data_dir'], params['output_data_subdir_scores'])
 Path(output_data_dir_scores).mkdir(parents=True, exist_ok=True)
 
-
-from labels import get_labels, load_data
 df_labels = get_labels(params['pca_dim'])
-
 
 class NN(nn.Module):
     """

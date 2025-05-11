@@ -10,9 +10,9 @@ from scipy.stats import multivariate_normal
 from bayesian_normal_regression.bayes_normal import BayesNormal
 from bayesian_normal_regression.dist import Normal
 
-from libs import create_loader
-from labels import get_labels, load_data
-from parameters import Params
+from game_recommender.libs_torch import create_loader
+from game_recommender.labels import get_labels, load_data
+from game_recommender.parameters import Params
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

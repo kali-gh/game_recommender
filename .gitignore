@@ -2,6 +2,7 @@ __pycache__
 venv
 .idea
 
+data
 store_data
 input_data
 processed_data
@@ -14,5 +15,6 @@ build
 *ipynb
 *whl
 *egg*
+*.tar.gz
 
 *.sh

@@ -31,3 +31,20 @@ class CustomDataset(Dataset):
     def __getitem__(self, idx):
         return self.X[idx], self.y[idx]
 
+def create_loader(df, x_cols, batch_size, shuffle=True):
+    """
+    Builds a loader to use for training / validation / test
+
+    Args:
+        df: dataframe to pull loader from
+    Returns:
+        the loader to use
+    """
+
+    X = torch.FloatTensor(df[x_cols].values)
+    y = torch.FloatTensor(df.rating.values).reshape(-1, 1)
+
+    dataset = CustomDataset(X, y)
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+
+    return loader
