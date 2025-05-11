@@ -2,7 +2,6 @@ import logging
 import pandas as pd
 import csv
 import time
-#import torch
 
 from typing import List
 from pathlib import Path
@@ -10,7 +9,6 @@ from gensim.utils import simple_preprocess
 from gensim.models import LsiModel
 from gensim import corpora
 from gensim.matutils import corpus2csc
-#from torch.utils.data import Dataset, DataLoader
 
 logger = logging.getLogger(__name__)
 

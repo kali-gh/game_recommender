@@ -16,5 +16,6 @@ build
 *whl
 *egg*
 *.tar.gz
+*.csv
 
 *.sh

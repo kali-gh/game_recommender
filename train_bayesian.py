@@ -43,6 +43,17 @@ x_cols = [
 
 def run_inference_test(
         df):
+    """
+    Runs inference on the test data, i.e. games with no rating
+
+    Args:
+        df : dataframe with test data
+
+    Returns:
+        df : the modified dataframe
+    After:
+        inferences written to df_predict.csv
+    """
 
     cond_train_val = ~df.rating.isnull()
     df_train_val_local = df[cond_train_val].copy()
@@ -71,13 +82,13 @@ def run_inference_test(
 
     df_test_local.loc[:, 'score'] = fitted.predict(X_test)
 
-    df = pd.concat([df_train_val_local, df_test_local], axis=0)
-    logger.info(f"len of df is {len(df)}")
+    df_out = pd.concat([df_train_val_local, df_test_local], axis=0)
+    logger.info(f"len of df is {len(df_out)}")
 
-    df.sort_values(by='score', ascending=False, inplace=True)
-    df.to_csv('df_predict.csv')
+    df_out.sort_values(by='score', ascending=False, inplace=True)
+    df_out.to_csv('df_predict.csv')
 
-    return fitted
+    return df_out
 
 
 if __name__ == '__main__':
@@ -120,3 +131,6 @@ if __name__ == '__main__':
 
     logger.info(f"Scores : {scores}")
     logger.info(f"Mean score : {scores.mean()}")
+
+
+    run_inference_test(df)

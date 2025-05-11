@@ -26,6 +26,17 @@ random.seed(SEED)
 np.random.seed(SEED)
 
 def build_df_model_ready():
+    """
+    Builds the model read dataframe using the consolidated labels file
+
+        - Imputes missing review scores with 0.0
+        - Imputes counts with 0
+        - Logs the review counts
+
+    Returns: dataframe with model ready data
+    After : writes a _SUCCESS statement to signal the data has been swapped out
+    """
+
     logger.info("Loading data from input_data directory")
 
     logger.info(f"Loading data from {output_data_dir_labels}")
@@ -53,8 +64,14 @@ def build_df_model_ready():
 
 def load_data():
     """
-    Loads data from input_data directory
-    Returns: train, validation and test dataframes + x columns
+    Builds the model ready dataframe and splits the data for estimation
+
+    Returns:
+        df_train_val_local - dataframe with train and validation data
+        df_train_local - dataframe with train data
+        df_val_local - dataframe with validation data
+        df_test_local - dataframe with test data
+        x_cols_selected - x columns to use
     """
 
     df = build_df_model_ready()
@@ -78,7 +95,28 @@ def load_data():
 
     return df_train_val_local, df_train_local, df_val_local, df_test_local, x_cols_selected
 
-def get_labels(pca_dim=5):
+def get_labels(
+        pca_dim = 5):
+    """
+    Builds the labels dataframe by
+        1. Loading all the parsed data for the games
+        2. Combines "about the game" and "description" fields into one text field
+        3. Builds Latent Semantic Analysis embeddings with the text data from the previous step with key topic vectors
+        4. OneHotEncodes the tag data
+        5. Runs the one hot's through PCA to get the pricnipal dimensions of tags and represents the tags data in the transformed space
+        6. Joins the rating data onto the labels
+        7. Filters to the released status
+        8. Outputs data to f"{output_data_dir_labels}/df_labels.csv"
+
+    Args:
+        pca_dim : number of PCA components to use
+
+    Returns:
+        pd  .DataFrame - dataframe after all the operations above
+    After :
+        writes the labels dataframe to output_data_dir_labels
+    """
+
     logger.info("Building labels...")
 
     logger.info("Initializing directories..")
