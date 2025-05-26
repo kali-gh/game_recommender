@@ -11,7 +11,7 @@ then run inference on the test set.
 
 ### Motivation
 Game recommendations on popular platforms are usually surfaced in a similar fashion as other entertainment applications 
-like for music (Spotify, Apple Music) or streaming (Netflix, HBO Max) and come typically in two forms:
+like for music or streaming and typically come in two popular formats:
 
 1. A carousel of recommended titles "you might enjoy" or "more like this" based on the game that you are currently viewing 
 2. Top rated or "most popular titles" based on some user given criteria
