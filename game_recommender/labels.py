@@ -13,8 +13,24 @@ from sklearn.model_selection import train_test_split
 
 from .parameters import Params
 
-logging.basicConfig(level=logging.INFO)
+##logging
+import logging
+import sys
+
+message_format_string = "%(asctime)s;%(levelname)s;%(message)s"
+date_format_string = "%Y-%m-%d %H:%M:%S"
+logging.basicConfig(level=logging.INFO,
+                    format=message_format_string,
+                    datefmt=date_format_string,
+                    filename='logger-recommender.log', filemode='a')
+sh = logging.StreamHandler(sys.stdout)
+formatter = logging.Formatter(message_format_string, date_format_string)
+sh.setFormatter(formatter)
+logging.getLogger('').addHandler(sh)
+
 logger = logging.getLogger(__name__)
+logger.info("starting up")
+###
 
 params = Params('input_data/params.json')
 
@@ -58,6 +74,11 @@ def build_df_model_ready():
     df.to_csv(f"{output_data_dir_labels}/df_labels_model_ready.csv", index=False)
     with open(f"{output_data_dir_labels}/_SUCCESS", 'w') as f:
         f.write('done')
+
+    logger.info("writing out genre columns")
+    genre_columns = [c for c in df.columns if c.startswith('genre_')]
+    with open(f"{output_data_dir_labels}/genre_columns.json", 'w') as f:
+        json.dump(genre_columns, f)
 
     return df
 
@@ -221,7 +242,7 @@ def get_labels(
     logger.info(df_res_transformed.head())
 
     logger.info("Combining data frames - game data, embeddings, one-hot encodings")
-    df_game_data_one_hot = pd.concat([df_game_data, df_embeddings, df_res_transformed], axis=1)
+    df_game_data_one_hot = pd.concat([df_game_data, df_embeddings, res, df_res_transformed], axis=1)
 
     filename_ratings = f'{params["user_input_data_dir"]}/ratings.json'
     with open(filename_ratings, 'r') as f:

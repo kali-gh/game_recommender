@@ -2,6 +2,7 @@ __pycache__
 venv
 .idea
 
+data-backup
 data
 store_data
 input_data

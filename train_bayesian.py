@@ -19,7 +19,7 @@ SEED = 42
 torch.manual_seed(SEED)
 
 params = Params('input_data/params.json')
-df_labels = get_labels(params['pca_dim'])
+df_labels = get_labels(10)#params['pca_dim'])
 
 output_data_dir_scores = os.path.join(params['output_data_dir'], params['output_data_subdir_scores'])
 Path(output_data_dir_scores).mkdir(parents=True, exist_ok=True)
@@ -38,8 +38,33 @@ x_cols = [
     'x_genre_1',
     'x_genre_2',
     'x_genre_3',
-    'x_genre_4'
+    'x_genre_4',
+    'x_genre_5',
+    'x_genre_6',
+    'x_genre_7',
+    'x_genre_8',
+    'x_genre_9',
 ]
+
+def update_x_cols(
+        df):
+    """
+    Updates the x_cols list based on the columns in the dataframe
+
+    Args:
+        df : dataframe with data
+
+    Returns:
+        x_cols : updated list of x columns
+    """
+
+    global x_cols
+    x_cols_local = x_cols.copy()
+
+    extra_genre_x_cols = [c for c in df.columns if c.startswith('genre_')]
+    x_cols_local.extend(extra_genre_x_cols)
+
+    return x_cols_local
 
 def run_inference_test(
         df):
@@ -92,12 +117,13 @@ def run_inference_test(
 
 
 if __name__ == '__main__':
-    df = pd.read_csv(
-        os.path.join(params['output_data_dir'], params['output_data_subdir_labels'], 'df_labels_model_ready_current.csv')
-    )
+    from game_recommender.labels import build_df_model_ready
+    df = build_df_model_ready()
 
     cond_train_val = ~df.rating.isnull()
     df_train_val_local = df[cond_train_val].copy()
+
+    #x_cols = update_x_cols(df)
 
     df_train_val, df_test = train_test_split(df_train_val_local, test_size=0.2)
 
