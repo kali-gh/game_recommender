@@ -19,34 +19,11 @@ SEED = 42
 torch.manual_seed(SEED)
 
 params = Params('input_data/params.json')
-df_labels = get_labels(10)#params['pca_dim'])
 
 output_data_dir_scores = os.path.join(params['output_data_dir'], params['output_data_subdir_scores'])
 Path(output_data_dir_scores).mkdir(parents=True, exist_ok=True)
 
-x_cols = [
-    'review_pct_overall',
-    'review_count_overall',
-    'has_reviews',
-    'has_extra_content',
-    'x_content_0',
-    'x_content_1',
-    'x_content_2',
-    'x_content_3',
-    'x_content_4',
-    'x_genre_0',
-    'x_genre_1',
-    'x_genre_2',
-    'x_genre_3',
-    'x_genre_4',
-    'x_genre_5',
-    'x_genre_6',
-    'x_genre_7',
-    'x_genre_8',
-    'x_genre_9',
-]
-
-def update_x_cols(
+def get_x_cols(
         df):
     """
     Updates the x_cols list based on the columns in the dataframe
@@ -58,21 +35,27 @@ def update_x_cols(
         x_cols : updated list of x columns
     """
 
-    global x_cols
-    x_cols_local = x_cols.copy()
+    x_cols = [
+        'review_pct_overall',
+        'review_count_overall',
+        'has_reviews',
+        'has_extra_content'
+    ]
 
-    extra_genre_x_cols = [c for c in df.columns if c.startswith('genre_')]
-    x_cols_local.extend(extra_genre_x_cols)
+    extra_genre_x_cols = [c for c in df.columns if (c.startswith('genre_') or c.startswith('x_content'))]
+    x_cols.extend(extra_genre_x_cols)
 
-    return x_cols_local
+    return x_cols
 
 def run_inference_test(
-        df):
+        df,
+        x_cols):
     """
     Runs inference on the test data, i.e. games with no rating
 
     Args:
         df : dataframe with test data
+        x_cols : x columns for model
 
     Returns:
         df : the modified dataframe
@@ -116,14 +99,16 @@ def run_inference_test(
     return df_out
 
 
-if __name__ == '__main__':
+def train(pca_dim = 5):
+    df_labels = get_labels(pca_dim)
+
     from game_recommender.labels import build_df_model_ready
     df = build_df_model_ready()
 
     cond_train_val = ~df.rating.isnull()
     df_train_val_local = df[cond_train_val].copy()
 
-    #x_cols = update_x_cols(df)
+    x_cols = get_x_cols(df)
 
     df_train_val, df_test = train_test_split(df_train_val_local, test_size=0.2)
 
@@ -158,5 +143,9 @@ if __name__ == '__main__':
     logger.info(f"Scores : {scores}")
     logger.info(f"Mean score : {scores.mean()}")
 
+    run_inference_test(df, x_cols)
 
-    run_inference_test(df)
+    return scores.mean()
+
+if __name__ == '__main__':
+    train()

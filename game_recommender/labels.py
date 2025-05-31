@@ -41,6 +41,18 @@ SEED = 1
 random.seed(SEED)
 np.random.seed(SEED)
 
+def get_active_genres(df):
+    # Filter columns that start with 'genre_'
+    genre_columns = [col for col in df.columns if col.startswith('genre_') and col != 'genre_+']
+
+    def process_row(row):
+        # Get active genres where value is 1
+        active_genres = [col for col in genre_columns if row[col] == 1]
+        # Clean up genre names by removing 'genre_' prefix
+        return [genre.replace('genre_', '') for genre in active_genres]
+
+    return df.apply(process_row, axis=1)
+
 def build_df_model_ready():
     """
     Builds the model read dataframe using the consolidated labels file
@@ -70,6 +82,9 @@ def build_df_model_ready():
         df.loc[:, 'review_count_overall'] = np.log(df.loc[:, 'review_count_overall']+1)
     else:
         pass
+
+    logger.info("adding list of genres")
+    df['genres'] = get_active_genres(df)
 
     df.to_csv(f"{output_data_dir_labels}/df_labels_model_ready.csv", index=False)
     with open(f"{output_data_dir_labels}/_SUCCESS", 'w') as f:
