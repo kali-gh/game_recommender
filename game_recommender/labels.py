@@ -10,6 +10,7 @@ from .libs import build_df_embeddings
 from pathlib import Path
 from sklearn.preprocessing import MultiLabelBinarizer
 from sklearn.model_selection import train_test_split
+from scipy.stats.mstats import winsorize
 
 from .parameters import Params
 
@@ -85,6 +86,12 @@ def build_df_model_ready():
 
     logger.info("adding list of genres")
     df['genres'] = get_active_genres(df)
+
+    # winsorization
+    winsorization_cols = [c for c in df.columns if c.startswith('x_genre_') or c.startswith('x_content_')]
+    for c in winsorization_cols:
+        logger.info(f"Winsorizing {c} to 0.01, removing top and bottom 1% extreme values")
+        df.loc[:, c] = winsorize(df.loc[:, c].values, limits=[0.01,0.01])
 
     df.to_csv(f"{output_data_dir_labels}/df_labels_model_ready.csv", index=False)
     with open(f"{output_data_dir_labels}/_SUCCESS", 'w') as f:
