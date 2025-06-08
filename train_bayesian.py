@@ -18,32 +18,32 @@ logger.info("initializing")
 SEED = 42
 torch.manual_seed(SEED)
 
-params = Params('input_data/params.json')
 
-output_data_dir_scores = os.path.join(params['output_data_dir'], params['output_data_subdir_scores'])
-Path(output_data_dir_scores).mkdir(parents=True, exist_ok=True)
 
 def get_x_cols(
-        df):
+        df,
+        params):
     """
     Updates the x_cols list based on the columns in the dataframe
 
     Args:
         df : dataframe with data
+        params: params to use
 
     Returns:
         x_cols : updated list of x columns
     """
 
-    x_cols = [
-        'review_pct_overall',
-        'review_count_overall',
-        'has_reviews',
-        'has_extra_content'
-    ]
+    logger.info(f"Adding columns to x_cols {params['x_cols_model']}")
+    x_cols = params['x_cols_model']
 
-    extra_genre_x_cols = [c for c in df.columns if (c.startswith('genre_') or c.startswith('x_content'))]
-    x_cols.extend(extra_genre_x_cols)
+    for prefix in params['x_cols_model_prefixes']:
+        logger.info(f"Adding prefix {prefix} to x_cols")
+        extra_genre_x_cols = [c for c in df.columns if (c.startswith(prefix))]
+        x_cols.extend(extra_genre_x_cols)
+
+    logger.info(f"Number of x_cols {len(x_cols)}")
+    logger.info(f"Final x_cols: {x_cols}")
 
     return x_cols
 
@@ -99,16 +99,25 @@ def run_inference_test(
     return df_out
 
 
-def train(pca_dim = 5):
-    df_labels = get_labels(pca_dim)
+def train(pca_dim = 5, params=None):
+
+    if params is None:
+        params = Params('input_data/params.json')
+
+        output_data_dir_scores = os.path.join(params['output_data_dir'], params['output_data_subdir_scores'])
+        Path(output_data_dir_scores).mkdir(parents=True, exist_ok=True)
+    else:
+        logger.info("using supplied params")
+
+    df_labels = get_labels(pca_dim, params=params)
 
     from game_recommender.labels import build_df_model_ready
-    df = build_df_model_ready()
+    df = build_df_model_ready(params=params)
 
     cond_train_val = ~df.rating.isnull()
     df_train_val_local = df[cond_train_val].copy()
 
-    x_cols = get_x_cols(df)
+    x_cols = get_x_cols(df, params)
 
     df_train_val, df_test = train_test_split(df_train_val_local, test_size=0.2)
 

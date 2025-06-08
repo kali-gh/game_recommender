@@ -33,11 +33,6 @@ logger = logging.getLogger(__name__)
 logger.info("starting up")
 ###
 
-params = Params('input_data/params.json')
-
-output_data_dir_labels = os.path.join(params['output_data_dir'], params['output_data_subdir_labels'])
-Path(output_data_dir_labels).mkdir(parents=True, exist_ok=True)
-
 SEED = 1
 random.seed(SEED)
 np.random.seed(SEED)
@@ -54,7 +49,7 @@ def get_active_genres(df):
 
     return df.apply(process_row, axis=1)
 
-def build_df_model_ready():
+def build_df_model_ready(params):
     """
     Builds the model read dataframe using the consolidated labels file
 
@@ -68,9 +63,9 @@ def build_df_model_ready():
 
     logger.info("Loading data from input_data directory")
 
-    logger.info(f"Loading data from {output_data_dir_labels}")
+    logger.info(f"Loading data from {params['output_data_dir_labels']}")
 
-    df = pd.read_csv(f"{output_data_dir_labels}/df_labels.csv")
+    df = pd.read_csv(f"{params['output_data_dir_labels']}/df_labels.csv")
 
     logger.info("Imputing mean review and min review counts")
     if 'review_pct_overall' in df.columns:
@@ -93,19 +88,19 @@ def build_df_model_ready():
         logger.info(f"Winsorizing {c} to 0.01, removing top and bottom 1% extreme values")
         df.loc[:, c] = winsorize(df.loc[:, c].values, limits=[0.01,0.01])
 
-    df.to_csv(f"{output_data_dir_labels}/df_labels_model_ready.csv", index=False)
-    with open(f"{output_data_dir_labels}/_SUCCESS", 'w') as f:
+    df.to_csv(f"{params['output_data_dir_labels']}/df_labels_model_ready.csv", index=False)
+    with open(f"{params['output_data_dir_labels']}/_SUCCESS", 'w') as f:
         f.write('done')
 
     logger.info("writing out genre columns")
     genre_columns = [c for c in df.columns if c.startswith('genre_')]
-    with open(f"{output_data_dir_labels}/genre_columns.json", 'w') as f:
+    with open(f"{params['output_data_dir_labels']}/genre_columns.json", 'w') as f:
         json.dump(genre_columns, f)
 
     return df
 
 
-def load_data():
+def load_data(params):
     """
     Builds the model ready dataframe and splits the data for estimation
 
@@ -117,7 +112,7 @@ def load_data():
         x_cols_selected - x columns to use
     """
 
-    df = build_df_model_ready()
+    df = build_df_model_ready(params)
 
     logger.info("Building train, validation and test dataframes")
     cond_train_val = ~df.rating.isnull()
@@ -139,7 +134,8 @@ def load_data():
     return df_train_val_local, df_train_local, df_val_local, df_test_local, x_cols_selected
 
 def get_labels(
-        pca_dim = 5):
+        pca_dim = 5,
+        params = None):
     """
     Builds the labels dataframe by
         1. Loading all the parsed data for the games
@@ -153,6 +149,7 @@ def get_labels(
 
     Args:
         pca_dim : number of PCA components to use
+        params: params for model
 
     Returns:
         pd  .DataFrame - dataframe after all the operations above
@@ -162,8 +159,14 @@ def get_labels(
 
     logger.info("Building labels...")
 
+    if params is None:
+        logger.info("using params file")
+        params = Params('input_data/params.json')
+    else:
+        logger.info("Using params passed in")
+
     logger.info("Initializing directories..")
-    Path(output_data_dir_labels).mkdir(parents=True, exist_ok=True)
+    Path(params['output_data_dir_labels']).mkdir(parents=True, exist_ok=True)
     Path(params['model_dir']).mkdir(parents=True, exist_ok=True)
 
     if not os.path.exists(params['input_data_dir']) or not os.path.exists(params['user_input_data_dir'])  :
@@ -205,22 +208,9 @@ def get_labels(
 
     logger.info("Building the embeddings...")
     logger.info(df_game_data.head())
-    df_game_data["full_description"] = df_game_data["description"].astype(str) + df_game_data["about_the_game"]
-
-    df_game_data.to_csv(os.path.join(output_data_dir_labels, 'df_game_data.csv'), index=False)
 
     logger.info("dtypes df_game_data: ")
     logger.info(df_game_data.dtypes)
-
-    documents = df_game_data['full_description'].tolist()
-    df_embeddings = build_df_embeddings(
-        documents = documents,
-        model_dir = params['model_dir'],
-        stoplist = params['stoplist'],
-        num_topics = params['num_topics'],
-        min_word_length = params["min_word_length"],
-        parse = True
-    )
 
     df_game_data.appid = df_game_data.appid.astype(int)
 
@@ -264,7 +254,24 @@ def get_labels(
     logger.info(df_res_transformed.head())
 
     logger.info("Combining data frames - game data, embeddings, one-hot encodings")
-    df_game_data_one_hot = pd.concat([df_game_data, df_embeddings, res, df_res_transformed], axis=1)
+    if 'x_content' in params['x_cols_model_prefixes']:
+        logger.info("including embeddings")
+        documents = df_game_data['words'].values
+        logger.info("documents contents before embeddings")
+        logger.info([d[:5] for d in documents[:2]])
+        df_embeddings = build_df_embeddings(
+            documents = documents,
+            model_dir = params['model_dir'],
+            stoplist = params['stoplist'],
+            num_topics = params['num_topics'],
+            min_word_length = params["min_word_length"],
+            parse = True
+        )
+
+        df_game_data_one_hot = pd.concat([df_game_data, df_embeddings, res, df_res_transformed], axis=1)
+    else:
+        logger.info("not running embeddings")
+        df_game_data_one_hot = pd.concat([df_game_data, res, df_res_transformed], axis=1)
 
     filename_ratings = f'{params["user_input_data_dir"]}/ratings.json'
     with open(filename_ratings, 'r') as f:
@@ -294,7 +301,7 @@ def get_labels(
         pass
     logger.info(f"new length {len(df_final)}")
 
-    df_final.to_csv(f"{output_data_dir_labels}/df_labels_all_cols.csv", index=False)
+    df_final.to_csv(f"{params['output_data_dir_labels']}/df_labels_all_cols.csv", index=False)
 
     df_final.drop(
         params['x_cols_drop']
@@ -319,7 +326,7 @@ def get_labels(
     logger.info('Stats')
     logger.info(json.dumps(stats,indent=4))
 
-    df_final.to_csv(f"{output_data_dir_labels}/df_labels.csv", index=False)
+    df_final.to_csv(f"{params['output_data_dir_labels']}/df_labels.csv", index=False)
 
     return df_final
 

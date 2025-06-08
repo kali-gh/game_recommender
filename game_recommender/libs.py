@@ -99,7 +99,7 @@ def remove_stopwords(
     return texts
 
 def build_df_embeddings(
-        documents : List[str],
+        documents : List[List[str]], # list of lists of words
         model_dir : str,
         stoplist : List[str],
         num_topics : int,
@@ -109,7 +109,7 @@ def build_df_embeddings(
     Builds the embeddings and return the vectors as a df which is N_doc x N_embed
 
     Args:
-        documents: list of strings representing documents to vectorize
+        documents:  list of lists of words
         model_dir: model directory
         stoplist: list of all words to exclude
         num_topics: number of dimensions for the embedding
@@ -121,33 +121,10 @@ def build_df_embeddings(
     """
 
     Path(model_dir).mkdir(exist_ok=True, parents=True)
-    
-    if parse:
-        logger.warning(f"Reparsing all the input files !")
-
-        start = time.time()
-        texts = parse_texts(
-            documents=documents,
-            stoplist=stoplist,
-            min_word_length=min_word_length
-        )
-        end = time.time()
-        logger.info(f"Parsing completed in {round(end - start,2)} seconds")
-        
-        with open(f"{model_dir}/texts.txt", "w") as f:
-            writer = csv.writer(f)
-            writer.writerows(texts)
-    else:
-        logger.info("Using existing model")
-    
-    with open(f"{model_dir}/texts.txt", "r") as f:
-        csv_reader = csv.reader(f) 
-        texts = list(csv_reader)
-        logger.debug(texts)
 
     logger.info("Building the embeddings...")
     model, dictionary, corpus = build_embeddings(
-        texts=texts,
+        texts=documents,
         num_topics=num_topics
     )
 
