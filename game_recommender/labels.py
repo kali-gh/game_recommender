@@ -4,6 +4,7 @@ import json
 import random
 import pandas as pd
 import numpy as np
+import psutil
 
 from .libs import build_df_embeddings
 
@@ -37,6 +38,11 @@ SEED = 1
 random.seed(SEED)
 np.random.seed(SEED)
 
+def print_memory_usage():
+    process = psutil.Process(os.getpid())
+    logger.info(f"Memory usage: {process.memory_info().rss / 1024 / 1024:.2f} MB")
+
+
 def get_active_genres(df):
     # Filter columns that start with 'genre_'
     genre_columns = [col for col in df.columns if col.startswith('genre_') and col != 'genre_+']
@@ -49,7 +55,7 @@ def get_active_genres(df):
 
     return df.apply(process_row, axis=1)
 
-def build_df_model_ready(params):
+def build_df_model_ready(params, df = None):
     """
     Builds the model read dataframe using the consolidated labels file
 
@@ -63,9 +69,14 @@ def build_df_model_ready(params):
 
     logger.info("Loading data from input_data directory")
 
-    logger.info(f"Loading data from {params['output_data_dir_labels']}")
+    print_memory_usage()
 
-    df = pd.read_csv(f"{params['output_data_dir_labels']}/df_labels.csv")
+    if df is None:
+        logger.info(f"Loading data from {params['output_data_dir_labels']}")
+
+        df = pd.read_csv(f"{params['output_data_dir_labels']}/df_labels.csv")
+    else:
+        logger.info("using passed df labels")
 
     logger.info("Imputing mean review and min review counts")
     if 'review_pct_overall' in df.columns:
@@ -75,7 +86,9 @@ def build_df_model_ready(params):
 
     if 'review_count_overall' in df.columns:
         df.loc[:, 'review_count_overall'] =  df.loc[:, 'review_count_overall'].fillna(0)
-        df.loc[:, 'review_count_overall'] = np.log(df.loc[:, 'review_count_overall']+1)
+        vals = df.loc[:, 'review_count_overall'].astype('Float64')
+        df.loc[:, 'review_count_overall'] = None
+        df.loc[:, 'review_count_overall'] = np.log(vals + 1.0)
     else:
         pass
 
@@ -96,6 +109,10 @@ def build_df_model_ready(params):
     genre_columns = [c for c in df.columns if c.startswith('genre_')]
     with open(f"{params['output_data_dir_labels']}/genre_columns.json", 'w') as f:
         json.dump(genre_columns, f)
+
+    print_memory_usage()
+
+    logger.info("done building df model ready")
 
     return df
 
@@ -159,6 +176,8 @@ def get_labels(
 
     logger.info("Building labels...")
 
+    print_memory_usage()
+
     if params is None:
         logger.info("using params file")
         params = Params('input_data/params.json')
@@ -185,10 +204,23 @@ def get_labels(
     for g in file_list_games:
         with open(os.path.join(input_data_dir, g), 'r') as f:
             ginfo=json.load(f)
+
+            for k in params['x_cols_never_needed']:
+                if k in ginfo.keys():
+                    del ginfo[k]
+
             game_data.update(ginfo)
+
+    print_memory_usage()
 
     df_game_data = pd.DataFrame.from_dict(game_data, orient='index')
     df_game_data.reset_index(inplace=True)
+
+    del game_data
+    import gc
+    gc.collect()
+
+    print_memory_usage()
 
     df_game_data.rename({'index': 'appid'}, axis=1, inplace=True)
 
@@ -202,7 +234,7 @@ def get_labels(
     logger.info('xcols')
     logger.info(params['x_cols'])
 
-    df_game_data = df_game_data.loc[:, columns].copy()
+    #df_game_data = df_game_data.loc[:, columns].copy()
 
     logger.info(f"Loaded game data into data frame with columns {','.join(df_game_data.columns)}")
 
@@ -269,9 +301,17 @@ def get_labels(
         )
 
         df_game_data_one_hot = pd.concat([df_game_data, df_embeddings, res, df_res_transformed], axis=1)
+        del df_embeddings
     else:
         logger.info("not running embeddings")
         df_game_data_one_hot = pd.concat([df_game_data, res, df_res_transformed], axis=1)
+
+    del df_game_data
+    del res
+    del df_res_transformed
+    gc.collect()
+
+    print_memory_usage()
 
     filename_ratings = f'{params["user_input_data_dir"]}/ratings.json'
     with open(filename_ratings, 'r') as f:
@@ -313,7 +353,7 @@ def get_labels(
     new_col_order = other_cols.copy()
     new_col_order.append(params['y_col'])
 
-    df_final = df_final.loc[:, new_col_order].copy()
+    df_final = df_final.loc[:, new_col_order]
 
     logger.info(f"Loaded data with column order : {','.join(df_final.columns)}")
 
@@ -321,12 +361,17 @@ def get_labels(
         'num_rows': len(df_final),
         'num_cols': len(df_final.columns),
         'num_unique' : df_final.appid.nunique(),
-        'game_data_files' : len(game_data)
+        'game_data_files' : len(df_final)
     }
     logger.info('Stats')
     logger.info(json.dumps(stats,indent=4))
 
+    df_final['review_pct_overall'] = df_final['review_pct_overall'].astype('Int64')
+    df_final['review_count_overall'] = df_final['review_count_overall'].astype('Int64')
+
     df_final.to_csv(f"{params['output_data_dir_labels']}/df_labels.csv", index=False)
+
+    print_memory_usage()
 
     return df_final
 
